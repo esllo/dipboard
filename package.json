@@ -1,0 +1,36 @@
+{
+  "name": "dipboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "export": "next export",
+    "start": "next start",
+    "tauri": "tauri",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.10.6",
+    "@mantine/core": "^6.0.8",
+    "@mantine/hooks": "^6.0.8",
+    "@tabler/icons-react": "^2.17.0",
+    "@tauri-apps/api": "^1.2.0",
+    "@types/node": "18.15.13",
+    "@types/react": "18.0.38",
+    "@types/react-dom": "18.0.11",
+    "eslint": "8.39.0",
+    "eslint-config-next": "13.3.1",
+    "next": "13.3.1",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "short-uuid": "^4.2.2",
+    "tauri-plugin-autostart-api": "https://github.com/tauri-apps/tauri-plugin-autostart",
+    "typescript": "5.0.4"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^1.3.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1"
+  }
+}

@@ -1,0 +1,7 @@
+src-tauri/
+node_modules/
+dist/
+.next/
+public/
+
+**/*.rs
