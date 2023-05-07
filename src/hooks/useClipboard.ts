@@ -11,10 +11,11 @@ export type TextClipbaord = {
 export type ImageClipbaord = {
   id: string;
   type: "image";
-  image: string;
+  image: number[];
+  url: string;
 };
 
-export type Clipboard = TextClipbaord;
+export type Clipboard = TextClipbaord | ImageClipbaord;
 
 const idGen = uuid(uuid.constants.cookieBase90);
 
@@ -48,7 +49,9 @@ export function useClipboard(storage: false | string = false) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function addNewClipboard(clip: Omit<Clipboard, "id">) {
+  function addNewClipboard(
+    clip: Omit<TextClipbaord, "id"> | Omit<ImageClipbaord, "id">
+  ) {
     setClipboard((prev) => {
       const newClips = [
         ...prev,
@@ -58,6 +61,7 @@ export function useClipboard(storage: false | string = false) {
         },
       ];
       write.current(newClips);
+      console.log(newClips);
       return newClips;
     });
   }
@@ -73,8 +77,10 @@ export function useClipboard(storage: false | string = false) {
     });
   }
 
-  function addClipboard(clip: Omit<Clipboard, "id">) {
-    const existId = findTextId(clip.text);
+  function addClipboard(
+    clip: Omit<TextClipbaord, "id"> | Omit<ImageClipbaord, "id">
+  ) {
+    const existId = findTextId(clip.type === "text" ? clip.text : "");
 
     if (existId) {
       addExistsClipboard(existId);
@@ -96,7 +102,9 @@ export function useClipboard(storage: false | string = false) {
   }
 
   function findTextId(findText: string): string | null {
-    const clip = clipboard.find(({ text }) => text === findText);
+    const clip = clipboard.find(
+      (clip) => clip.type === "text" && clip.text === findText
+    );
     return clip ? clip.id : null;
   }
 

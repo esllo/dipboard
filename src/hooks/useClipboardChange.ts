@@ -1,12 +1,21 @@
 import { useEffect, useTransition } from "react";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
 
+type Clipboard = {
+  Text?: string;
+  Image?: {
+    data: number[];
+    width: number;
+    height: number;
+  };
+};
+
 type ClipboardChangePayload = {
-  clipboard: string;
+  clipboard: Clipboard;
 };
 
 type ClipboardChangeOptions = {
-  onChange: (clipboard: string) => void;
+  onChange: (clipboard: Clipboard) => void;
 };
 
 export function useClipboardChange({ onChange }: ClipboardChangeOptions): void {
@@ -24,7 +33,9 @@ export function useClipboardChange({ onChange }: ClipboardChangeOptions): void {
             unregister?.();
             return;
           }
-          startTransition(() => onChange(event.payload.clipboard));
+          const { clipboard } = event.payload;
+
+          startTransition(() => onChange(clipboard));
         }
       );
     }
