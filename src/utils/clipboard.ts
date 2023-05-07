@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api";
+
 export async function writeClipboard(text: string): Promise<boolean> {
   if (!("navigator" in window)) return false;
   if (!("clipboard" in navigator)) return false;
@@ -21,4 +23,17 @@ export async function readClipboard(): Promise<string | boolean> {
   } catch (e) {
     return false;
   }
+}
+
+export function writeClipboardImage(image: number[]): Promise<boolean> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const result = await invoke<true>("copy_image", {
+        image,
+      });
+      resolve(result);
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
