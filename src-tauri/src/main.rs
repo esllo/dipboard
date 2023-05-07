@@ -4,6 +4,7 @@
 )]
 
 use std::{
+    borrow::Cow,
     fs::{self, OpenOptions},
     io::Write,
     thread,
@@ -17,6 +18,9 @@ use tauri::{
 use arboard::{Clipboard, ImageData};
 
 use tauri_plugin_autostart::MacosLauncher;
+
+use image::{GenericImageView, ImageBuffer, ImageOutputFormat, Pixel, Rgba};
+use sha1::{Digest, Sha1};
 
 #[tauri::command]
 fn write_file(app_handle: tauri::AppHandle, filename: String, content: String) -> Result<bool, i8> {
@@ -108,9 +112,15 @@ struct ImageBox {
 }
 
 #[derive(Clone, serde::Serialize)]
+struct HashImageBox {
+    hash: String,
+    image_box: ImageBox,
+}
+
+#[derive(Clone, serde::Serialize)]
 enum Clip {
     Text(String),
-    Image(ImageBox),
+    Image(HashImageBox),
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -151,8 +161,6 @@ fn convert_image(image: ImageData) -> ImageBox {
     }
 }
 
-use sha1::{Digest, Sha1};
-
 fn get_sha1(vec: Vec<u8>) -> String {
     let mut hasher = Sha1::new();
 
@@ -182,6 +190,50 @@ fn get_image_sha1(image: ImageBox) -> String {
     let sha1 = get_sha1(target_vec);
 
     sha1
+}
+
+fn rgba_to_png(image: &[u8], width: usize, height: usize) -> Vec<u8> {
+    let image = ImageBuffer::<Rgba<u8>, _>::from_raw(width as u32, height as u32, image).unwrap();
+
+    let mut png_buffer = std::io::Cursor::new(Vec::new());
+
+    image
+        .write_to(&mut png_buffer, ImageOutputFormat::Png)
+        .unwrap();
+
+    png_buffer.into_inner()
+}
+
+fn png_to_rgba(image: &[u8]) -> ImageData {
+    let image = image::load_from_memory(image).unwrap();
+
+    let width = image.width();
+    let height = image.height();
+
+    let mut rgba = ImageBuffer::<Rgba<u8>, _>::new(width, height);
+    for (x, y, px) in image.pixels() {
+        rgba.put_pixel(x, y, px.to_rgba());
+    }
+
+    let bytes = Cow::Owned(rgba.into_raw());
+
+    ImageData {
+        width: width as usize,
+        height: height as usize,
+        bytes,
+    }
+}
+
+#[tauri::command]
+fn copy_image(image: Vec<u8>) -> Result<bool, i8> {
+    let image_array = image.as_slice();
+    let image_data = png_to_rgba(image_array);
+    let mut clipboard = Clipboard::new().unwrap();
+
+    match clipboard.set_image(image_data) {
+        Ok(()) => Ok(true),
+        Err(_) => Err(1),
+    }
 }
 
 fn listen_clipbaord(app_handle: tauri::AppHandle) {
@@ -222,11 +274,18 @@ fn listen_clipbaord(app_handle: tauri::AppHandle) {
 
                     if image_sha1 != last_clipboard {
                         last_clipboard = image_sha1.clone();
+                        let image_box = ImageBox {
+                            data: rgba_to_png(&image_box.data, image_box.width, image_box.height),
+                            ..image_box
+                        };
                         app_handle
                             .emit_all(
-                                "tick",
+                                "clipboard_change",
                                 ClipboardPayload {
-                                    clipboard: Clip::Image(image_box),
+                                    clipboard: Clip::Image(HashImageBox {
+                                        hash: image_sha1.clone(),
+                                        image_box,
+                                    }),
                                 },
                             )
                             .unwrap();
@@ -249,7 +308,7 @@ fn main() {
         })
         .system_tray(create_tray())
         .on_system_tray_event(handle_system_event)
-        .invoke_handler(tauri::generate_handler![write_file, read_file])
+        .invoke_handler(tauri::generate_handler![write_file, read_file, copy_image])
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             Some(vec![]),
