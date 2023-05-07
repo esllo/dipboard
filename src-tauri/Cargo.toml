@@ -20,6 +20,7 @@ tauri = { version = "1.2.4", features = ["fs-all", "global-shortcut-all", "path-
 tauri-plugin-autostart = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "dev" }
 clipboard = "0.5.0"
 notify = "5.1.0"
+arboard = { version = "3.2.0" }
 
 [features]
 # by default Tauri runs in production mode
