@@ -1,7 +1,7 @@
-import { useEffect, useTransition } from "react";
+import { DependencyList, useEffect } from "react";
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
 
-type Clipboard = {
+export type ClipboardPayloadContent = {
   Text?: string;
   Image?: {
     hash: string;
@@ -13,17 +13,19 @@ type Clipboard = {
   };
 };
 
-type ClipboardChangePayload = {
-  clipboard: Clipboard;
+export type ClipboardChangePayload = {
+  clipboard: ClipboardPayloadContent;
 };
 
 type ClipboardChangeOptions = {
-  onChange: (clipboard: Clipboard) => void;
+  onChange: (clipboard: ClipboardPayloadContent) => void;
+  deps: DependencyList;
 };
 
-export function useClipboardChange({ onChange }: ClipboardChangeOptions): void {
-  const [, startTransition] = useTransition();
-
+export function useClipboardChange({
+  onChange,
+  deps,
+}: ClipboardChangeOptions): void {
   useEffect(() => {
     let unregister: UnlistenFn | null = null;
     let mount = true;
@@ -37,8 +39,7 @@ export function useClipboardChange({ onChange }: ClipboardChangeOptions): void {
             return;
           }
           const { clipboard } = event.payload;
-
-          startTransition(() => onChange(clipboard));
+          onChange(clipboard);
         }
       );
     }
@@ -52,5 +53,5 @@ export function useClipboardChange({ onChange }: ClipboardChangeOptions): void {
       mount = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, deps);
 }
