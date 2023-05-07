@@ -14,19 +14,9 @@ use tauri::{
     SystemTrayMenuItem,
 };
 
-use clipboard::{ClipboardContext, ClipboardProvider};
+use arboard::{Clipboard, ImageData};
+
 use tauri_plugin_autostart::MacosLauncher;
-
-fn get_clipboard() -> String {
-    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-
-    let raw_content = ctx.get_contents();
-
-    match raw_content {
-        Ok(content) => content,
-        Err(_) => "".to_owned(),
-    }
-}
 
 #[tauri::command]
 fn write_file(app_handle: tauri::AppHandle, filename: String, content: String) -> Result<bool, i8> {
@@ -111,23 +101,97 @@ fn handle_system_event(app: &AppHandle, event: SystemTrayEvent) -> () {
 }
 
 #[derive(Clone, serde::Serialize)]
+struct ImageBox {
+    width: usize,
+    height: usize,
+    data: Vec<u8>,
+}
+
+#[derive(Clone, serde::Serialize)]
+enum Clip {
+    Text(String),
+    Image(ImageBox),
+}
+
+#[derive(Clone, serde::Serialize)]
 struct ClipboardPayload {
+    clipboard: Clip,
+}
+
+fn get_clipboard_image() -> Option<ImageData<'static>> {
+    let mut clipboard = Clipboard::new().unwrap();
+    match clipboard.get_image() {
+        Ok(image_data) => Some(image_data),
+        Err(_) => None,
+    }
+}
+
+fn get_clipboard_text() -> Option<String> {
+    let mut clipboard = Clipboard::new().unwrap();
+    match clipboard.get_text() {
+        Ok(text_data) => Some(text_data),
+        Err(_) => None,
+    }
+}
+
+#[derive(Clone, serde::Serialize)]
+struct TickPayload {
     clipboard: String,
+}
+
+fn convert_image(image: ImageData) -> ImageBox {
+    let data = Vec::from(image.bytes.as_ref().to_owned());
+    let width = image.width;
+    let height = image.height;
+
+    ImageBox {
+        width,
+        height,
+        data,
+    }
 }
 
 fn listen_clipbaord(app_handle: tauri::AppHandle) {
     let _handle = thread::spawn(move || {
-        let mut last_clipboard = get_clipboard();
+        let mut last_clipboard = "".to_owned();
 
         loop {
-            let clipboard = get_clipboard();
+            let clip_text = get_clipboard_text();
+            let clip_image = get_clipboard_image();
 
-            if clipboard != last_clipboard {
-                last_clipboard = clipboard.clone();
-                app_handle
-                    .emit_all("clipboard_change", ClipboardPayload { clipboard })
-                    .unwrap();
-            }
+            match clip_text {
+                Some(text) => {
+                    if text != last_clipboard {
+                        last_clipboard = text.clone();
+                        app_handle
+                            .emit_all(
+                                "clipboard_change",
+                                ClipboardPayload {
+                                    clipboard: Clip::Text(text),
+                                },
+                            )
+                            .unwrap();
+                    }
+                }
+                None => {}
+            };
+
+            match clip_image {
+                Some(image) => {
+                    let image_box = convert_image(image);
+
+                    app_handle
+                        .emit_all(
+                            "tick",
+                            ClipboardPayload {
+                                clipboard: Clip::Image(image_box),
+                            },
+                        )
+                        .unwrap();
+                }
+                None => {}
+            };
+
             thread::sleep(Duration::from_millis(1000));
         }
     });
