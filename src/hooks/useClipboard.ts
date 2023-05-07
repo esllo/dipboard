@@ -62,7 +62,6 @@ export function useClipboard(storage: false | string = false) {
         },
       ];
       write.current(newClips);
-      console.log(newClips);
       return newClips;
     });
   }
@@ -81,7 +80,7 @@ export function useClipboard(storage: false | string = false) {
   function addClipboard(
     clip: Omit<TextClipbaord, "id"> | Omit<ImageClipbaord, "id">
   ) {
-    const existId = findContentId(clip.type === "text" ? clip.text : clip.hash);
+    const existId = findContentId(getContent({ ...clip, id: "" }) || "");
 
     if (existId) {
       addExistsClipboard(existId);
