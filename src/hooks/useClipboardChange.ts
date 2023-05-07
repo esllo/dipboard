@@ -4,9 +4,12 @@ import { UnlistenFn, listen } from "@tauri-apps/api/event";
 type Clipboard = {
   Text?: string;
   Image?: {
-    data: number[];
-    width: number;
-    height: number;
+    hash: string;
+    image_box: {
+      data: number[];
+      width: number;
+      height: number;
+    };
   };
 };
 

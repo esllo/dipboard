@@ -13,6 +13,7 @@ export type ImageClipbaord = {
   type: "image";
   image: number[];
   url: string;
+  hash: string;
 };
 
 export type Clipboard = TextClipbaord | ImageClipbaord;
