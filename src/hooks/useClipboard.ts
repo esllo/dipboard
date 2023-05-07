@@ -81,7 +81,7 @@ export function useClipboard(storage: false | string = false) {
   function addClipboard(
     clip: Omit<TextClipbaord, "id"> | Omit<ImageClipbaord, "id">
   ) {
-    const existId = findTextId(clip.type === "text" ? clip.text : "");
+    const existId = findContentId(clip.type === "text" ? clip.text : clip.hash);
 
     if (existId) {
       addExistsClipboard(existId);
@@ -98,14 +98,26 @@ export function useClipboard(storage: false | string = false) {
     });
   }
 
-  function hasText(findText: string) {
-    return findTextId(findText) !== null;
+  function getContent(clip?: Clipboard): string | null {
+    if (!clip) return null;
+
+    if (clip.type === "text") {
+      return clip.text;
+    }
+
+    if (clip.type === "image") {
+      return clip.hash;
+    }
+
+    return null;
   }
 
-  function findTextId(findText: string): string | null {
-    const clip = clipboard.find(
-      (clip) => clip.type === "text" && clip.text === findText
-    );
+  function hasContent(content: string) {
+    return findContentId(content) !== null;
+  }
+
+  function findContentId(content: string): string | null {
+    const clip = clipboard.find((clip) => getContent(clip) === content);
     return clip ? clip.id : null;
   }
 
@@ -113,6 +125,6 @@ export function useClipboard(storage: false | string = false) {
     clipboard,
     addClipboard,
     removeClipboard,
-    hasText,
+    hasContent,
   };
 }
