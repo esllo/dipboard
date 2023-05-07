@@ -21,6 +21,7 @@ tauri-plugin-autostart = { git = "https://github.com/tauri-apps/plugins-workspac
 clipboard = "0.5.0"
 notify = "5.1.0"
 arboard = { version = "3.2.0" }
+sha1 = { version = "0.10.5", feature = ["std"] }
 
 [features]
 # by default Tauri runs in production mode
