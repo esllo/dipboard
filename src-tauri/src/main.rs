@@ -151,6 +151,39 @@ fn convert_image(image: ImageData) -> ImageBox {
     }
 }
 
+use sha1::{Digest, Sha1};
+
+fn get_sha1(vec: Vec<u8>) -> String {
+    let mut hasher = Sha1::new();
+
+    hasher.update(vec);
+
+    let result = hasher.finalize();
+
+    let mut hex_string = String::new();
+    for byte in result {
+        hex_string.push_str(&format!("{:02x}", byte));
+    }
+    hex_string
+}
+
+fn get_image_sha1(image: ImageBox) -> String {
+    let max_length = image.width * image.height * 4;
+    let slice = if max_length < 200 { max_length } else { 200 };
+
+    let width_bytes = image.width.to_le_bytes();
+    let height_bytes = image.height.to_le_bytes();
+    let mut target_vec = Vec::new();
+
+    target_vec.extend(width_bytes);
+    target_vec.extend(height_bytes);
+    target_vec.extend(image.data[..slice].to_vec());
+
+    let sha1 = get_sha1(target_vec);
+
+    sha1
+}
+
 fn listen_clipbaord(app_handle: tauri::AppHandle) {
     let _handle = thread::spawn(move || {
         let mut last_clipboard = "".to_owned();
@@ -180,14 +213,24 @@ fn listen_clipbaord(app_handle: tauri::AppHandle) {
                 Some(image) => {
                     let image_box = convert_image(image);
 
-                    app_handle
-                        .emit_all(
-                            "tick",
-                            ClipboardPayload {
-                                clipboard: Clip::Image(image_box),
-                            },
-                        )
-                        .unwrap();
+                    // only accept image smaller than 2000 * 1200
+                    if image_box.width * image_box.height > 2000 * 1200 {
+                        continue;
+                    }
+
+                    let image_sha1 = get_image_sha1(image_box.clone());
+
+                    if image_sha1 != last_clipboard {
+                        last_clipboard = image_sha1.clone();
+                        app_handle
+                            .emit_all(
+                                "tick",
+                                ClipboardPayload {
+                                    clipboard: Clip::Image(image_box),
+                                },
+                            )
+                            .unwrap();
+                    }
                 }
                 None => {}
             };
