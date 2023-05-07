@@ -11,10 +11,12 @@ export type TextClipbaord = {
 export type ImageClipbaord = {
   id: string;
   type: "image";
-  image: string;
+  image: number[];
+  url: string;
+  hash: string;
 };
 
-export type Clipboard = TextClipbaord;
+export type Clipboard = TextClipbaord | ImageClipbaord;
 
 const idGen = uuid(uuid.constants.cookieBase90);
 
@@ -48,7 +50,9 @@ export function useClipboard(storage: false | string = false) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function addNewClipboard(clip: Omit<Clipboard, "id">) {
+  function addNewClipboard(
+    clip: Omit<TextClipbaord, "id"> | Omit<ImageClipbaord, "id">
+  ) {
     setClipboard((prev) => {
       const newClips = [
         ...prev,
@@ -73,8 +77,10 @@ export function useClipboard(storage: false | string = false) {
     });
   }
 
-  function addClipboard(clip: Omit<Clipboard, "id">) {
-    const existId = findTextId(clip.text);
+  function addClipboard(
+    clip: Omit<TextClipbaord, "id"> | Omit<ImageClipbaord, "id">
+  ) {
+    const existId = findContentId(getContent({ ...clip, id: "" }) || "");
 
     if (existId) {
       addExistsClipboard(existId);
@@ -91,12 +97,26 @@ export function useClipboard(storage: false | string = false) {
     });
   }
 
-  function hasText(findText: string) {
-    return findTextId(findText) !== null;
+  function getContent(clip?: Clipboard): string | null {
+    if (!clip) return null;
+
+    if (clip.type === "text") {
+      return clip.text;
+    }
+
+    if (clip.type === "image") {
+      return clip.hash;
+    }
+
+    return null;
   }
 
-  function findTextId(findText: string): string | null {
-    const clip = clipboard.find(({ text }) => text === findText);
+  function hasContent(content: string) {
+    return findContentId(content) !== null;
+  }
+
+  function findContentId(content: string): string | null {
+    const clip = clipboard.find((clip) => getContent(clip) === content);
     return clip ? clip.id : null;
   }
 
@@ -104,6 +124,6 @@ export function useClipboard(storage: false | string = false) {
     clipboard,
     addClipboard,
     removeClipboard,
-    hasText,
+    hasContent,
   };
 }

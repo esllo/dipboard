@@ -3,10 +3,13 @@ import Clip from "@/components/Clip";
 import ClipList from "@/components/ClipList";
 import Bottom from "@/components/Bottom";
 import Top from "@/components/TopTab";
-import { useClipboard } from "@/hooks/useClipboard";
+import { Clipboard, useClipboard } from "@/hooks/useClipboard";
 import ClipAddModal from "@/components/ClipAddModal";
 import { useState } from "react";
 import { useClipboardChange } from "@/hooks/useClipboardChange";
+import { pngToUrl } from "@/utils/image";
+import { Image } from "@mantine/core";
+import { writeClipboard, writeClipboardImage } from "@/utils/clipboard";
 
 interface useHomeOptions {
   onClipAdd?: (text: string) => void;
@@ -40,6 +43,30 @@ const tabs = [
   { id: "session", text: "수집됨" },
 ];
 
+function getClipContent(clip: Clipboard) {
+  if (clip.type === "text") {
+    return clip.text;
+  }
+
+  if (clip.type === "image") {
+    return <Image src={clip.url} alt={clip.id} />;
+  }
+
+  return "";
+}
+
+function handleClipClick(clip: Clipboard) {
+  return () => {
+    if (clip.type === "text") {
+      writeClipboard(clip.text);
+    }
+
+    if (clip.type === "image") {
+      writeClipboardImage(clip.image).catch(console.error);
+    }
+  };
+}
+
 const Home: React.FC = () => {
   const permanentClipboard = useClipboard("clipboard");
   const sessionClipboard = useClipboard();
@@ -60,18 +87,35 @@ const Home: React.FC = () => {
 
   useClipboardChange({
     onChange: (clipboard) => {
-      if (
-        clipboard &&
-        clipboard !== "" &&
-        !permanentClipboard.hasText(clipboard) &&
-        !sessionClipboard.hasText(clipboard)
-      ) {
+      if (clipboard.Text) {
+        // text
+        const text = clipboard.Text;
+        if (
+          !permanentClipboard.hasContent(text) &&
+          !sessionClipboard.hasContent(text)
+        ) {
+          sessionClipboard.addClipboard({
+            type: "text",
+            text,
+          });
+        }
+      }
+
+      if (clipboard.Image) {
+        // image
+        const { hash, image_box } = clipboard.Image;
+
+        const url = pngToUrl(image_box.data);
+
         sessionClipboard.addClipboard({
-          type: "text",
-          text: clipboard,
+          type: "image",
+          image: image_box.data,
+          url,
+          hash,
         });
       }
     },
+    deps: [sessionClipboard.clipboard],
   });
 
   return (
@@ -85,8 +129,9 @@ const Home: React.FC = () => {
             <Clip
               key={clip.id}
               onDelete={() => currentBoard.removeClipboard(clip.id)}
+              onClick={handleClipClick(clip)}
             >
-              {clip.type === "text" && clip.text}
+              {getClipContent(clip)}
             </Clip>
           ))}
       </ClipList>

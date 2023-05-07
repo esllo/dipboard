@@ -1,4 +1,3 @@
-import { writeClipboard } from "@/utils/clipboard";
 import {
   ActionIcon,
   Text,
@@ -98,13 +97,12 @@ const Clip: React.FC<ClipProps> = ({ children, onDelete, ...props }) => {
     <UnstyledButton
       component="div"
       role="button"
-      onClick={() => writeClipboard((children || "").toString())}
       className={classes.root}
       p={"xs"}
       {...props}
     >
       <Text className={classes.text}>
-        {parseText(children?.toString() || "")}
+        {typeof children === "string" ? parseText(children) : children}
       </Text>
       <ActionIcon
         variant=""
